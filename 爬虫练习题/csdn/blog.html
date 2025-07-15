@@ -1,0 +1,132 @@
+
+        
+        
+                
+                    
+                        
+                    
+                    什么叫js hook？ 
+Hook技术又叫钩子函数，在系统没有调用该函数之前，钩子程序就捕获该消息，钩子函数先得到该函数的控制权，这时钩子函数既可以改变该函数的执行行为，还可以强制结束消息的传递，简单来说。就是把系统的程序拉出来，来变成我们自己执行的片段。 简单来说就是我们可以控制执行函数的入参和出参。 
+为什么能实现hook？ 
+客户端拥有js的最高解释权，可以决定在任何的时候注入js服务器而无法左右，只能通过 检测和混淆手段令hook难度加大，但是却无法阻止hook hook的目的：找到函数入口以及一些参数的变化，便于分析js逻辑 
+函数hook三部曲： 赋值，重写，原型链 
+使用方式 一般的模板 
+var old_func = func;
+// 重写func
+func = function(arguments){
+	// 可以执行操作, 这里就只打印
+    console.log(arguments)
+    // 返回原来函数调用
+    return old_func.apply(arguments)
+}
+ 
+这里只是在原来函数的基础上添加log打印，最后调用原函数 使用apply和call的比较 apply 是不知道参数有多少个 call 明确参数  
+但这样很容易被检测，检测原型链很容易检测出来，原型链上的toString  
+hook函数 
+每次hook函数都要重写，有没有简便点的 把hook函数定义到function的原型链上，让每个函数都可以调用 // 创建对象用来保存函数 
+window.zsk = {}
+Function.prototype.hook = function(onEnter, onLeave, context){
+    // 赋值
+    // btoa.hook()
+    var _this = this; // btoa
+    var _context = context || window;  // 没有上下文就默认全局变量
+    var FuncName = _this.name;
+    if (!FuncName){
+        console.log("hook function name is empty!");
+        return false;
+    }
+
+    window.zsk[FuncName] = this;
+
+    // 重写
+    _context[FuncName] = function (){
+        var args = Array.prototype.slice.call(arguments, 0);  // 把arguments变成数组
+        var _this = this;
+        var warrper = {
+            args
+        }
+        onEnter.call(_this, warrper)
+        // this -> window
+        var retval =  window.zsk[FuncName].apply(this, warrper.args);
+
+        var hook_retval = onLeave.call(_this, retval);
+        if(hook_retval){
+            return hook_retval;
+        }
+        return retval;
+    }
+}
+console.log("hook start!")
+ 
+使用  
+但是很容易贝检测到  
+网上找了个脚本伪造toString 
+// 创建对象用来保存函数
+window.zsk = {}
+Function.prototype.hook = function(onEnter, onLeave, context){
+    if(!onEnter){
+        onEnter = function (warpper, Funcname){
+            var args = warpper.args;
+            console.log(Funcname, "onEnter -> ", args);
+        }
+    }
+    if(!onLeave){
+        onLeave = function (retval, Funcname){
+            console.log(Funcname, "onLeave -> ", retval);
+        }
+    }
+    // 赋值
+    // xxx.hook()
+    var _this = this; // xxx
+    var _context = context || window;
+    var FuncName = _this.name;
+    if (!FuncName){
+        console.log("hook function name is empty!");
+        return false;
+    }
+    window.zsk[FuncName] = this;
+    // 重写
+    _context[FuncName] = function (){
+        var args = Array.prototype.slice.call(arguments, 0);
+        var _this = this;
+        var warrper = {
+            args
+        }
+        onEnter.call(_this, warrper)
+        // this -> window
+        var retval =  window.zsk[FuncName].apply(this, warrper.args);
+
+        var hook_retval = onLeave.call(_this, retval);
+        if(hook_retval){
+            return hook_retval;
+        }
+        return retval;
+    }
+    Object.defineProperty(_context[FuncName], "name", {
+        get: function (){
+            return FuncName
+        }
+    })
+    func_set_native(_context[FuncName]);
+}
+console.log("hook start!")
+ 
+ 
+hook对象属性 
+不仅可以hook函数，还可以hook对象的属性 先了解一个函数 Object.defineProperty() Object.defineProperty() 方法会直接在一个对象上定义一个新属性，或者修改一个对象的现有属性，并返回此对象。 像一般的网站加密都在cookie上，那如何快速定位到加密位置呢 
+Object.defineProperty(document, "cookie", {
+    get: function(val){
+        return val;
+    },
+    set: function(val){
+        debugger;
+        return val;
+    }
+})
+ 
+打开网站时候，先把script断点点上，等执行到生成cookie的ja文件的时候，再把代码输入到控制台  
+然后一直运行，直到它debugger断上，根据堆栈返回上一级就可以定位到加密的位置 
+                
+                
+                
+        
