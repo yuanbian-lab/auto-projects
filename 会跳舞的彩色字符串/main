@@ -1,0 +1,35 @@
+# -*- coding=utf-8 -*-
+
+
+import os
+import sys
+import time
+import math
+
+def clear():
+    cls = 'cls' if os.name == 'nt' else 'clear'
+    os.system(cls)
+
+text = "Hello, World! 欢迎来到猿变实验室"
+colors = [31, 33, 32, 36, 34, 35]
+amplitude = 4
+speed = 0.2
+width = 20
+# console = Console()
+try:
+    t = 0
+    for i in range(100000):
+        clear()
+        # console.clear()
+        for i, char in enumerate(text):
+            y = int(10 + math.sin(t + i * 0.5) * amplitude)
+            x = width + i
+            color = colors[i % len(colors)]
+            # 输出字符到指定位置并加颜色
+            sys.stdout.write(f"\033[{y};{x}H"
+            f"\033[{color}m{char}\033[0m")
+        sys.stdout.flush()
+        time.sleep(speed)
+        t += 0.3
+except KeyboardInterrupt:
+    print("\033[0m\n退出动画")
